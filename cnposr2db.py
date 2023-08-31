@@ -31,7 +31,7 @@ provinces = ['北京市', '天津市', '河北省', '山西省', '内蒙古自�
              '浙江省', '安徽省', '福建省', '江西省',
              '山东省', '河南省', '湖北省', '湖南省', '广东省', '广西壮族自治区', '海南省', '重庆市', '四川省', '贵州省',
              '云南省', '西藏自治区', '陕西省', '甘肃省',
-             '青海省', '宁夏回族自治区', '新疆维吾尔自治区', '台湾省', '香港特别行政区', '澳门特别行政区']
+             '青海省', '宁夏回族自治区', '新疆维吾尔自治区', '台湾省', '香港特别行政区', '澳门特别行政区', '台湾省']
 api_uri = 'https://restapi.amap.com/v3/config/district?key={}&keywords={}&subdistrict=2&extensions=base'
 sql_ins = 'INSERT INTO home_areageo(AreaCode,ALng,ALat) VALUES (%s, %s, %s);'
 start_time = datetime.now()
@@ -48,35 +48,39 @@ create table home_areageo
 )
     comment '地区经纬度';
 """
-cur = con.cursor()
-cur.execute('TRUNCATE TABLE home_areageo;')
-for i in provinces:
-    pro_start = datetime.now()
-    api_url = api_uri.format(api_key, i)
-    res = requests.get(api_url)
-    province = json.loads(res.text)['districts']
-    procode = province[0]['adcode']
-    prolng = province[0]['center'].split(',')[0]
-    prolat = province[0]['center'].split(',')[1]
-    citys = province[0]['districts']
-    cur.execute(sql_ins, (procode, float(prolng), float(prolat)))
-    for city in citys:
-        citycode = city['adcode']
-        citylng = city['center'].split(',')[0]
-        citylat = city['center'].split(',')[1]
-        areas = city['districts']
-        cur.execute(sql_ins, (citycode, float(citylng), float(citylat)))
-        for area in areas:
-            areacode = area['adcode']
-            arealng = area['center'].split(',')[0]
-            arealat = area['center'].split(',')[1]
-            cur.execute(sql_ins, (areacode, float(arealng), float(arealat)))
-    pro_end = datetime.now()
-    print('省份：{}处理完成，总计耗时{}秒！'.format(i, (pro_end - pro_start).total_seconds()))
-con.commit()
-cur.close()
-con.close()
+try:
+    cur = con.cursor()
+    cur.execute('TRUNCATE TABLE home_areageo;')
+    for i in provinces:
+        pro_start = datetime.now()
+        api_url = api_uri.format(api_key, i)
+        res = requests.get(api_url)
+        province = json.loads(res.text)['districts']
+        procode = province[0]['adcode']
+        prolng = province[0]['center'].split(',')[0]
+        prolat = province[0]['center'].split(',')[1]
+        citys = province[0]['districts']
+        cur.execute(sql_ins, (procode, float(prolng), float(prolat)))
+        for city in citys:
+            citycode = city['adcode']
+            citylng = city['center'].split(',')[0]
+            citylat = city['center'].split(',')[1]
+            areas = city['districts']
+            cur.execute(sql_ins, (citycode, float(citylng), float(citylat)))
+            for area in areas:
+                areacode = area['adcode']
+                arealng = area['center'].split(',')[0]
+                arealat = area['center'].split(',')[1]
+                cur.execute(sql_ins, (areacode, float(arealng), float(arealat)))
+        pro_end = datetime.now()
+        print('省份："{}"处理完成，总计耗时{}秒！'.format(i, (pro_end - pro_start).total_seconds()))
+
+        con.commit()
+except Exception as e:
+    print(e)
+finally:
+    cur.close()
+    con.close()
 
 end_time = datetime.now()
-
 print('全部处理完成，总计耗时{}秒！'.format((end_time - start_time).total_seconds()))
